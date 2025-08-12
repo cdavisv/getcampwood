@@ -1,6 +1,7 @@
 import React from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import api from '../services/api';
 
 const GetCampWoodHomepage = ({ onNavigate, isLoggedIn, currentUser, onLogout }) => {
   const styles = {
@@ -282,9 +283,14 @@ const GetCampWoodHomepage = ({ onNavigate, isLoggedIn, currentUser, onLogout }) 
     }
   };
 
-  const handleViewMapClick = () => {
-    alert('🗺️ Interactive Map Coming Soon!\n\nOur map feature will show you all local firewood suppliers in your area with real-time availability and pricing.');
+    const handleViewMapClick = () => {
+    const mapUrl = import.meta.env.VITE_MAP_UI_URL || 'http://localhost:5174';
+    const token = api.getAuthToken(); // Get the token
+    // Append the token to the URL if it exists
+    const urlWithToken = token ? `${mapUrl}?token=${token}` : mapUrl;
+    window.open(urlWithToken, '_blank');
   };
+  
 
   const handlePromoteListingsClick = () => {
     alert('📢 Listing Promotion Coming Soon!\n\nBoost your firewood listings to reach more customers and increase your sales.');

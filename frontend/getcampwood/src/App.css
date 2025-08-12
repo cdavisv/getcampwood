@@ -52,3 +52,47 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Global floating "View Map" button */
+.floating-map-btn {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 9999px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  cursor: pointer;
+  background: #1f2937; /* neutral dark */
+  color: #ffffff;
+  transition: transform 0.08s ease-out, box-shadow 0.2s ease, opacity 0.2s ease;
+  opacity: 0.95;
+}
+
+.floating-map-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+  opacity: 1;
+}
+
+.floating-map-btn:active {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-map-btn {
+    transition: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .floating-map-btn {
+    right: 12px;
+    bottom: 12px;
+    padding: 10px 14px;
+    font-size: 15px;
+  }
+}

@@ -32,8 +32,18 @@ class ApiService {
   setUser(user) {
     localStorage.setItem('user', JSON.stringify(user));
   }
+  // Convenience: set both token and user
+  setAuth(token, user) {
+    this.setAuthToken(token);
+    this.setUser(user);
+  }
 
-  // Check if user is authenticated
+  // Convenience: clear auth (token + user)
+  clearAuth() {
+    this.removeAuthToken();
+  }
+
+  // Convenience: set both token a {
   isAuthenticated() {
     return !!this.getAuthToken();
   }

@@ -697,7 +697,6 @@ const ListingCard = ({ icon, title, description, onClick, styles }) => {
       <span style={styles.listingIcon}>{icon}</span>
       <h3 style={styles.listingTitle}>{title}</h3>
       <p style={styles.listingDescription}>{description}</p>
-      <span style={styles.comingSoonBadge}>Coming Soon</span>
     </div>
   );
 };
