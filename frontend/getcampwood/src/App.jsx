@@ -1,24 +1,13 @@
+// src/App.jsx
+
 import React, { useState, useEffect } from 'react';
 import GetCampWoodHomepage from './components/GetCampWoodHomepage';
 import RegistrationPage from './components/RegistrationPage';
 import LoginPage from './components/LoginPage';
 import AccountPage from './components/AccountPage';
+import MapPage from './components/MapPage'; // <-- IMPORT THE NEW MAP PAGE
 import api from './services/api';
 import './App.css';
-
-// Floating global "View Map" button (bottom-right)
-function FloatingViewMapButton({ onClick }) {
-  return (
-    <button
-      className="floating-map-btn"
-      aria-label="View Map"
-      title="View Map"
-      onClick={onClick}
-    >
-      View Map
-    </button>
-  );
-}
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -37,8 +26,8 @@ function App() {
         if (freshUser) {
           setCurrentUser(freshUser);
         } else {
-          setIsLoggedIn(false);
-          setCurrentUser(null);
+          // Token was invalid, log out
+          handleLogout();
         }
       })();
     }
@@ -50,22 +39,22 @@ function App() {
       const token = api.getAuthToken();
       const cachedUser = api.getUser();
       if (token && cachedUser) {
-        setIsLoggedIn(true);
-        setCurrentUser(cachedUser);
+        if (!isLoggedIn) setIsLoggedIn(true);
+        if (JSON.stringify(currentUser) !== JSON.stringify(cachedUser)) {
+             setCurrentUser(cachedUser);
+        }
       } else {
-        setIsLoggedIn(false);
-        setCurrentUser(null);
-        if (currentPage === 'account') setCurrentPage('home');
+        if (isLoggedIn) {
+            setIsLoggedIn(false);
+            setCurrentUser(null);
+            if (currentPage === 'account' || currentPage === 'map') setCurrentPage('home');
+        }
       }
     }
-    function handleStorage(e) {
-      if (e.key === 'authToken' || e.key === 'user' || e.key === null) {
-        applyAuthFromStorage();
-      }
-    }
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, [currentPage]);
+    window.addEventListener('storage', applyAuthFromStorage);
+    return () => window.removeEventListener('storage', applyAuthFromStorage);
+  }, [currentPage, isLoggedIn, currentUser]);
+
 
   const handleNavigate = (page) => setCurrentPage(page);
 
@@ -105,68 +94,31 @@ function App() {
     console.log('User account deleted');
   };
 
-  const handleViewMap = () => {
-    const mapUrl = import.meta.env.VITE_MAP_UI_URL || 'http://localhost:5174';
-    const token = api.getAuthToken(); // Get the token
-    // Append the token to the URL if it exists
-    const urlWithToken = token ? `${mapUrl}?token=${token}` : mapUrl;
-    window.open(urlWithToken, '_blank');
+  // REMOVED: The old handleViewMap and FloatingViewMapButton are no longer needed.
+  // Navigation is now handled by the components themselves.
+
+  // --- Page Rendering Logic ---
+  const pageProps = {
+    onNavigate: handleNavigate,
+    isLoggedIn: isLoggedIn,
+    currentUser: currentUser,
+    onLogout: handleLogout,
   };
 
-  if (currentPage === 'account') {
-    return (
-      <>
-        <AccountPage
-          onNavigate={handleNavigate}
-          isLoggedIn={isLoggedIn}
-          currentUser={currentUser}
-          onLogout={handleLogout}
-          onUserUpdate={handleUserUpdate}
-          onAccountDeleted={handleAccountDeletion}
-        />
-        <FloatingViewMapButton onClick={handleViewMap} />
-      </>
-    );
+  switch (currentPage) {
+    case 'home':
+      return <GetCampWoodHomepage {...pageProps} />;
+    case 'map': // <-- ADDED: Route to the map page
+      return <MapPage {...pageProps} />;
+    case 'account':
+      return <AccountPage {...pageProps} onUserUpdate={handleUserUpdate} onAccountDeleted={handleAccountDeletion} />;
+    case 'register':
+      return <RegistrationPage {...pageProps} onRegister={handleRegister} />;
+    case 'login':
+      return <LoginPage {...pageProps} onLogin={handleLogin} />;
+    default:
+      return <GetCampWoodHomepage {...pageProps} />;
   }
-  if (currentPage === 'register') {
-    return (
-      <>
-        <RegistrationPage
-          onNavigate={handleNavigate}
-          onRegister={handleRegister}
-          isLoggedIn={isLoggedIn}
-          currentUser={currentUser}
-          onLogout={handleLogout}
-        />
-        <FloatingViewMapButton onClick={handleViewMap} />
-      </>
-    );
-  }
-  if (currentPage === 'login') {
-    return (
-      <>
-        <LoginPage
-          onNavigate={handleNavigate}
-          onLogin={handleLogin}
-          isLoggedIn={isLoggedIn}
-          currentUser={currentUser}
-          onLogout={handleLogout}
-        />
-        <FloatingViewMapButton onClick={handleViewMap} />
-      </>
-    );
-  }
-  return (
-    <>
-      <GetCampWoodHomepage
-        onNavigate={handleNavigate}
-        isLoggedIn={isLoggedIn}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-      />
-      <FloatingViewMapButton onClick={handleViewMap} />
-    </>
-  );
 }
 
 export default App;

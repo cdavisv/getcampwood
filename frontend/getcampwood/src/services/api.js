@@ -1,11 +1,9 @@
-// services/api.js
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// src/services/api.js
+
+// Using a single API URL for both auth and locations
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 class ApiService {
-  constructor() {
-    this.baseURL = API_BASE_URL;
-  }
-
   // Get auth token from localStorage
   getAuthToken() {
     return localStorage.getItem('authToken');
@@ -32,25 +30,25 @@ class ApiService {
   setUser(user) {
     localStorage.setItem('user', JSON.stringify(user));
   }
-  // Convenience: set both token and user
-  setAuth(token, user) {
-    this.setAuthToken(token);
-    this.setUser(user);
-  }
-
-  // Convenience: clear auth (token + user)
-  clearAuth() {
-    this.removeAuthToken();
-  }
-
-  // Convenience: set both token a {
+  
   isAuthenticated() {
     return !!this.getAuthToken();
   }
 
-  // Make API request with auth header
+  // Check if API is available
+  async checkApiConnection() {
+    try {
+      const response = await fetch(`${API_URL}/health`);
+      return response.ok;
+    } catch (error) {
+      console.error('API connection check failed:', error);
+      return false;
+    }
+  }
+
+  // Generic API request handler
   async apiRequest(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
+    const url = `${API_URL}${endpoint}`;
     const token = this.getAuthToken();
 
     const config = {
@@ -63,26 +61,14 @@ class ApiService {
     };
 
     try {
-      console.log(`Making ${config.method || 'GET'} request to: ${url}`);
-      
       const response = await fetch(url, config);
       
-      // Check if response is JSON
-      const contentType = response.headers.get('content-type');
-      let data;
-      
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        // Handle non-JSON responses
-        const text = await response.text();
-        data = { 
-          success: false, 
-          message: `Server returned non-JSON response: ${text}` 
-        };
+      // Handle empty responses (like 204 No Content)
+      if (response.status === 204) {
+        return { success: true };
       }
 
-      console.log(`Response status: ${response.status}`, data);
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
@@ -90,177 +76,175 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('API request error:', error);
-      
-      // Handle network errors or connection refused
+      console.error(`API request to ${url} failed:`, error);
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        throw new Error('Unable to connect to server. Please make sure the backend is running on http://localhost:5000');
+        throw new Error(`Unable to connect to the server at ${API_URL}. Please ensure the backend service is running.`);
       }
-      
       throw error;
     }
   }
 
-  // Auth methods
+  // --- Auth & User Methods ---
   async register(userData) {
-    try {
-      const response = await this.apiRequest('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(userData),
-      });
-
-      if (response.success && response.token) {
-        this.setAuthToken(response.token);
-        this.setUser(response.user);
-      }
-
-      return response;
-    } catch (error) {
-      throw new Error(error.message || 'Registration failed');
+    const response = await this.apiRequest('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+    if (response.success && response.token) {
+      this.setAuthToken(response.token);
+      this.setUser(response.user);
     }
+    return response;
   }
 
   async login(credentials) {
-    try {
-      const response = await this.apiRequest('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(credentials),
-      });
-
-      if (response.success && response.token) {
-        this.setAuthToken(response.token);
-        this.setUser(response.user);
-      }
-
-      return response;
-    } catch (error) {
-      throw new Error(error.message || 'Login failed');
+    const response = await this.apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+    if (response.success && response.token) {
+      this.setAuthToken(response.token);
+      this.setUser(response.user);
     }
+    return response;
   }
 
   async logout() {
     try {
       if (this.isAuthenticated()) {
-        await this.apiRequest('/auth/logout', {
-          method: 'POST',
-        });
+        await this.apiRequest('/auth/logout', { method: 'POST' });
       }
     } catch (error) {
-      console.error('Logout error:', error);
-      // Don't throw error for logout - always clean up locally
+      console.error('Logout API call failed, logging out locally.', error);
     } finally {
       this.removeAuthToken();
     }
   }
 
   async getCurrentUser() {
+    if (!this.isAuthenticated()) return null;
     try {
       const response = await this.apiRequest('/auth/me');
-      
       if (response.success) {
         this.setUser(response.user);
         return response.user;
       }
-      
       return null;
     } catch (error) {
       console.error('Get current user error:', error);
-      this.removeAuthToken();
+      this.removeAuthToken(); // Token is likely invalid
       return null;
     }
   }
 
-  // Profile management methods
   async updateProfile(userData) {
-    try {
-      const response = await this.apiRequest('/user/profile', {
-        method: 'PUT',
-        body: JSON.stringify(userData),
-      });
-
-      if (response.success) {
-        // Update stored user data with new information
-        this.setUser(response.user);
-      }
-
-      return response;
-    } catch (error) {
-      throw new Error(error.message || 'Failed to update profile');
+    const response = await this.apiRequest('/user/profile', {
+      method: 'PUT',
+      body: JSON.stringify(userData),
+    });
+    if (response.success) {
+      this.setUser(response.user);
     }
-  }
-
-  async changePassword(passwordData) {
-    try {
-      const response = await this.apiRequest('/user/change-password', {
-        method: 'PUT',
-        body: JSON.stringify(passwordData),
-      });
-
-      return response;
-    } catch (error) {
-      throw new Error(error.message || 'Failed to change password');
-    }
+    return response;
   }
 
   async deleteAccount() {
+    const response = await this.apiRequest('/user/account', {
+      method: 'DELETE',
+    });
+    if (response.success) {
+      this.removeAuthToken();
+    }
+    return response;
+  }
+
+  // --- Location Methods ---
+  
+  /**
+   * Fetches all firewood locations.
+   * This is a public endpoint, so no auth is required.
+   */
+  async getLocations() {
+    const response = await this.apiRequest('/locations');
+    console.log('API getLocations response:', response);
+    return response;
+  }
+
+  /**
+   * Debug endpoint to check current user token
+   */
+  async debugCurrentUser() {
+    if (!this.isAuthenticated()) {
+      console.log('No auth token found');
+      return null;
+    }
+    
     try {
-      console.log('Attempting to delete account...');
-      
-      const response = await this.apiRequest('/user/account', {
-        method: 'DELETE',
-      });
-
-      console.log('Delete account response:', response);
-
-      if (response.success) {
-        // Clear all stored auth data
-        this.removeAuthToken();
-        console.log('Account deleted successfully, auth data cleared');
-      }
-
+      const response = await this.apiRequest('/auth/me');
+      console.log('Debug current user response:', response);
       return response;
     } catch (error) {
-      console.error('Delete account error:', error);
-      throw new Error(error.message || 'Failed to delete account');
-    }
-  }
-
-  // Health check
-  async healthCheck() {
-    try {
-      const response = await this.apiRequest('/health');
-      return response;
-    } catch (error) {
-      console.error('Health check failed:', error);
-      return { success: false, message: 'API unavailable' };
-    }
-  }
-
-  // Utility method to check if API is available
-  async checkApiConnection() {
-    try {
-      const health = await this.healthCheck();
-      console.log('API connection check:', health);
-      return health.success;
-    } catch (error) {
-      console.error('API connection check failed:', error);
-      return false;
-    }
-  }
-
-  // Method to refresh user data
-  async refreshUserData() {
-    try {
-      const user = await this.getCurrentUser();
-      return user;
-    } catch (error) {
-      console.error('Failed to refresh user data:', error);
+      console.error('Debug current user error:', error);
       return null;
     }
   }
+
+  /**
+   * Adds a new firewood location.
+   * This is a protected endpoint and requires authentication.
+   * @param {object} locationData - { name, description, price, latitude, longitude }
+   */
+  async addLocation(locationData) {
+    return this.apiRequest('/locations', {
+      method: 'POST',
+      body: JSON.stringify(locationData),
+    });
+  }
+
+  /**
+   * Get a specific location by ID
+   * @param {string} locationId - The location ID
+   */
+  async getLocation(locationId) {
+    return this.apiRequest(`/locations/${locationId}`);
+  }
+
+  /**
+   * Update a location (only by creator or admin)
+   * @param {string} locationId - The location ID
+   * @param {object} locationData - Updated location data
+   */
+  async updateLocation(locationId, locationData) {
+    return this.apiRequest(`/locations/${locationId}`, {
+      method: 'PUT',
+      body: JSON.stringify(locationData),
+    });
+  }
+
+  /**
+   * Delete a location (only by creator or admin)
+   * @param {string} locationId - The location ID
+   */
+  async deleteLocation(locationId) {
+    return this.apiRequest(`/locations/${locationId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Get current user's locations
+   */
+  async getMyLocations() {
+    return this.apiRequest('/locations/user/mine');
+  }
+
+  /**
+   * Get user statistics
+   */
+  async getUserStats() {
+    return this.apiRequest('/user/stats');
+  }
 }
 
-// Create singleton instance
 const apiService = new ApiService();
-
 export default apiService;

@@ -1,9 +1,13 @@
+// src/components/GetCampWoodHomepage.jsx
+
 import React from 'react';
 import Header from './Header';
 import Footer from './Footer';
-import api from '../services/api';
+// api service is not directly used here anymore for the map button
+// import api from '../services/api'; 
 
 const GetCampWoodHomepage = ({ onNavigate, isLoggedIn, currentUser, onLogout }) => {
+  // ... (styles object remains the same)
   const styles = {
     pageWrapper: {
       minHeight: '100vh',
@@ -277,25 +281,25 @@ const GetCampWoodHomepage = ({ onNavigate, isLoggedIn, currentUser, onLogout }) 
     }
   };
 
+
   const handleSignUpClick = () => {
     if (onNavigate) {
       onNavigate('register');
     }
   };
 
-    const handleViewMapClick = () => {
-    const mapUrl = import.meta.env.VITE_MAP_UI_URL || 'http://localhost:5174';
-    const token = api.getAuthToken(); // Get the token
-    // Append the token to the URL if it exists
-    const urlWithToken = token ? `${mapUrl}?token=${token}` : mapUrl;
-    window.open(urlWithToken, '_blank');
+  const handleViewMapClick = () => {
+    // UPDATED: Navigate internally instead of opening a new window
+    if (onNavigate) {
+      onNavigate('map');
+    }
   };
-  
 
   const handlePromoteListingsClick = () => {
     alert('📢 Listing Promotion Coming Soon!\n\nBoost your firewood listings to reach more customers and increase your sales.');
   };
 
+  // The rest of the component's return statement is unchanged...
   return (
     <div style={styles.pageWrapper}>
       <Header onNavigate={onNavigate} isLoggedIn={isLoggedIn} currentUser={currentUser} onLogout={onLogout} />
@@ -311,7 +315,10 @@ const GetCampWoodHomepage = ({ onNavigate, isLoggedIn, currentUser, onLogout }) 
                 style={styles.bannerImage}
                 onError={(e) => {
                   e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'block';
+                  // This logic to show a fallback is complex and might be better handled differently
+                  // For now, we ensure it doesn't crash.
+                  const fallback = e.target.nextSibling;
+                  if (fallback) fallback.style.display = 'block';
                 }}
               />
               {/* Fallback content */}
