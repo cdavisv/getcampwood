@@ -28,7 +28,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/user', require('./routes/user')); // We'll create this
+app.use('/api/user', require('./routes/user'));
 app.use('/api/locations', require('./routes/Locations'));
 
 // Health check

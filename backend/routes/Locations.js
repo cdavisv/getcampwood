@@ -30,8 +30,6 @@ router.get('/', [
     let query = { status: 'active' };
     let locations;
 
-    console.log('Getting locations with query:', query);
-
     // If coordinates provided, find nearby locations
     if (lat && lng) {
       const radiusInKm = radius ? parseFloat(radius) : 50;
@@ -47,9 +45,6 @@ router.get('/', [
         .sort({ createdAt: -1 });
     }
 
-    console.log('Found locations:', locations.length);
-    console.log('Sample location:', locations[0]);
-
     // Transform the data to ensure consistent format
     const transformedLocations = locations.map(loc => {
       const locationObj = loc.toObject();
@@ -63,8 +58,6 @@ router.get('/', [
         } : locationObj.createdBy
       };
     });
-
-    console.log('Transformed locations sample:', transformedLocations[0]);
 
     res.json({
       success: true,

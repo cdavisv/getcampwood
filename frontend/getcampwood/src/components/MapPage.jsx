@@ -42,14 +42,6 @@ const MapPage = ({ onNavigate, isLoggedIn, currentUser, onLogout }) => {
   useEffect(() => {
     if (mapRef.current) return; // Prevents re-initialization
 
-    // Debug current user
-    if (currentUser) {
-      console.log('MapPage currentUser:', currentUser);
-      api.debugCurrentUser().then(debugResult => {
-        console.log('Debug user from API:', debugResult);
-      });
-    }
-
     // Initialize the map
     mapRef.current = L.map(mapContainerRef.current).setView([43.366, -124.217], 11);
 
@@ -133,13 +125,7 @@ const MapPage = ({ onNavigate, isLoggedIn, currentUser, onLogout }) => {
       if (markersLayerRef.current) {
         markersLayerRef.current.clearLayers();
         (data.locations || []).forEach(loc => {
-          // Enhanced ownership check with debugging
-          console.log('Location:', loc.name);
-          console.log('Location createdBy:', loc.createdBy);
-          console.log('Current user:', currentUser);
-          
           const isOwner = checkOwnership(loc, currentUser);
-          console.log('Is owner:', isOwner);
           
           const popupContent = createPopupContent(loc, isOwner);
           
@@ -165,18 +151,12 @@ const MapPage = ({ onNavigate, isLoggedIn, currentUser, onLogout }) => {
     }
   };
 
-  // Enhanced ownership checking function
+  // Check if the current user owns a location
   const checkOwnership = (location, user) => {
-    if (!user || !location.createdBy) {
-      console.log('No user or no createdBy field');
-      return false;
-    }
+    if (!user || !location.createdBy) return false;
 
-    // Get the user ID to compare
     const userId = user.id || user._id;
-    console.log('User ID:', userId);
 
-    // Handle different formats of createdBy
     let createdById;
     if (typeof location.createdBy === 'string') {
       createdById = location.createdBy;
@@ -185,13 +165,8 @@ const MapPage = ({ onNavigate, isLoggedIn, currentUser, onLogout }) => {
     } else if (location.createdBy.id) {
       createdById = location.createdBy.id;
     }
-    
-    console.log('Created by ID:', createdById);
-    
-    const isOwner = userId && createdById && (userId === createdById);
-    console.log('Ownership comparison result:', isOwner);
-    
-    return isOwner;
+
+    return userId && createdById && (userId === createdById);
   };
 
   // Create popup content with conditional delete button
@@ -216,13 +191,8 @@ const MapPage = ({ onNavigate, isLoggedIn, currentUser, onLogout }) => {
         🗑️ Delete Location
       </button>` : '';
 
-    const createdByText = location.createdBy?.name ? 
+    const createdByText = location.createdBy?.name ?
       `<p style="margin: 4px 0; color: #6b7280; font-size: 12px;">Added by: ${location.createdBy.name}</p>` : '';
-
-    // Debug info (remove this in production)
-    const debugInfo = isOwner ? 
-      `<p style="margin: 4px 0; color: #059669; font-size: 10px; font-style: italic;">✓ You own this location</p>` : 
-      `<p style="margin: 4px 0; color: #6b7280; font-size: 10px; font-style: italic;">○ Not your location</p>`;
 
     return `
       <div style="font-family: system-ui, sans-serif; min-width: 200px;">
@@ -230,7 +200,6 @@ const MapPage = ({ onNavigate, isLoggedIn, currentUser, onLogout }) => {
         ${location.description ? `<p style="margin: 4px 0; color: #6b7280; font-size: 14px;">${location.description}</p>` : ''}
         ${location.price ? `<p style="margin: 4px 0; font-weight: 600; color: #059669; font-size: 14px;">${location.price}</p>` : ''}
         ${createdByText}
-        ${debugInfo}
         ${deleteButton}
       </div>
     `;

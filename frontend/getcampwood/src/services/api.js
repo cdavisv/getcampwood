@@ -165,28 +165,7 @@ class ApiService {
    * This is a public endpoint, so no auth is required.
    */
   async getLocations() {
-    const response = await this.apiRequest('/locations');
-    console.log('API getLocations response:', response);
-    return response;
-  }
-
-  /**
-   * Debug endpoint to check current user token
-   */
-  async debugCurrentUser() {
-    if (!this.isAuthenticated()) {
-      console.log('No auth token found');
-      return null;
-    }
-    
-    try {
-      const response = await this.apiRequest('/auth/me');
-      console.log('Debug current user response:', response);
-      return response;
-    } catch (error) {
-      console.error('Debug current user error:', error);
-      return null;
-    }
+    return this.apiRequest('/locations');
   }
 
   /**
